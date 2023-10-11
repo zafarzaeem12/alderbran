@@ -225,73 +225,50 @@ try{
 }
 const createCaseActivity = async (req, res, next) => {
   try {
-    // start forms
-    const userForm = await Forms.find({ auth: req.data.id });
-    const allforms = userForm.map((data) => ({ form_id: data._id }));
-    // end forms
-    // start non value
-    const nonvalue = await NonValueActivity.find({ user: req.data.id });
-    const allnonvalue = nonvalue.map((data) => ({ nonValueActivity : data._id }))
-    //start non value
-    //start impact
-    const useimapact = await impactibilityModel.find({ user: req.data.id });
-    const allimapcts = useimapact.map((data) => ({ impactibility : data._id }));
-    //end impact
-    //start upload_doc
-    const upload = await RecordingFile.findOne({ user: req.data.id });
-    //end upload_doc
-    //start voice_rec
-    const recording = await VoiceRecordingModel.findOne({ user: req.data.id });
-    //end voice_rec
-
-    const allUserData = await Promise.all([allforms,upload,allimapcts,allnonvalue,recording])
-
-    const [
-      form ,
-      uploads,
-      imapacts,
-      nonvalues,
-      voice_recording
-     ] = [...allUserData]
      
      const {
       activity_id,
-      description
+      description,
+      recordings,
+      recordingMediaFile,
+      Non_Valur,
+      imapact,
+      form
      }  = req.body
 
     const Data = {
       activity_id,
-      form,
-      recordings : voice_recording,
+      form : form.map((data) => ({ form_id : data.form_id}) ),
+      recordings ,
       description,
-      imapact : imapacts,
-      Non_Valur : nonvalues,
-      recordingMediaFile : uploads
+      imapact : imapact.map((data) => ({ impactibility : data.impactibility})),
+      Non_Valur : Non_Valur.map((data) => ({ nonValueActivity : data.nonValueActivity})),
+      recordingMediaFile,
     }
     
     const savedCaseAct = await CaseActivityModel.create(Data)
-
+    console.log(savedCaseAct)
     
-    const f = userForm.map(async(data) => {
+    const f = form.map(async(data) => {
       if(!data.CaseActivity_id){
-        await Forms.updateOne({_id : data._id.toString()},{$set : {CaseActivity_id : savedCaseAct._id}},{new : true})
+        await Forms.updateOne({_id : data.form_id.toString()},{$set : {CaseActivity_id : savedCaseAct._id}},{new : true})
       }else{ null }
     })
 
-    const n = nonvalue.map(async(data) => {
+    const n = Non_Valur.map(async(data) => {
       if(!data.CaseActivity_id){
-        await NonValueActivity.updateOne({_id : data._id.toString()},{$set : {CaseActivity_id : savedCaseAct._id}},{new : true})
+        await NonValueActivity.updateOne({_id : data.nonValueActivity.toString()},{$set : {CaseActivity_id : savedCaseAct._id}},{new : true})
       }else{ null }
     })
-    const i = useimapact.map(async(data) => {
+    const i = imapact.map(async(data) => {
       if(!data.CaseActivity_id){
-        await impactibilityModel.updateOne({_id : data._id.toString()},{$set : {CaseActivity_id : savedCaseAct._id}},{new : true})
+        await impactibilityModel.updateOne({_id : data.impactibility.toString()},{$set : {CaseActivity_id : savedCaseAct._id}},{new : true})
       }else{ null }
     })
 
-    const r = await RecordingFile.updateOne({_id : upload._id},{$set : {CaseActivity_id : savedCaseAct._id}},{new : true})
+     const r = await RecordingFile.updateOne({_id : Data.recordingMediaFile},{$set : {CaseActivity_id : savedCaseAct._id}},{new : true})
 
-    const v = await VoiceRecordingModel.updateOne({_id : recording._id},{$set : {CaseActivity_id : savedCaseAct._id}},{new : true})
+     const v = await VoiceRecordingModel.updateOne({_id : Data.recordings},{$set : {CaseActivity_id : savedCaseAct._id}},{new : true})
 
     
     
@@ -307,7 +284,7 @@ const createCaseActivity = async (req, res, next) => {
     })
   
   } catch (err) {
-    console.error(err);
+    console.log(err);
     res.status(500).send({ message: "Internal server error", status: 0 });
   }
 };
